@@ -1,0 +1,76 @@
+# Lint, test and build a Node repo, as job `ci` in its ci.yml:
+#
+#   jobs:
+#     ci:
+#       uses: vEXOULZ/conventions/.github/workflows/node-ci.yml@v1.0.0
+#
+# Its jobs become the required checks `ci / lint`, `ci / test` and `ci / build`. Node comes from .nvmrc.
+# Each step runs the package script of the same name when there is one (lint, typecheck, test, build).
+name: node-ci
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: "."
+      ignore-scripts:
+        description: Install with --ignore-scripts, so a dependency's install script never runs in CI
+        type: boolean
+        default: true
+      pack:
+        description: Also check that `npm pack` succeeds (for a published package)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci ${{ inputs.ignore-scripts && '--ignore-scripts' || '' }}
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci ${{ inputs.ignore-scripts && '--ignore-scripts' || '' }}
+      - run: npm run test --if-present
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - run: npm ci ${{ inputs.ignore-scripts && '--ignore-scripts' || '' }}
+      - run: npm run build --if-present
+      - if: inputs.pack
+        run: npm pack --dry-run

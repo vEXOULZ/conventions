@@ -1,0 +1,15 @@
+# Secrets and local settings. The templates (.env.example, secrets.example/) are the ones committed.
+.env
+.env.*
+!.env.example
+secrets/
+
+# Claude Code worktrees and the graphify knowledge graph, both local to a checkout
+.claude/worktrees/
+graphify-out/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
