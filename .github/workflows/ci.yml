@@ -1,0 +1,27 @@
+# This repo's own CI: the same conventions check and Python CI every repo runs, taken from this
+# checkout rather than a released tag, plus shellcheck for the synced hooks.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  conventions:
+    uses: ./.github/workflows/conventions-check.yml
+    with:
+      from: "."
+    secrets: inherit
+
+  ci:
+    uses: ./.github/workflows/python-ci.yml
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck src/conventions/files/common/.conventions/githooks/*

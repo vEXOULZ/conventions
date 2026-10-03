@@ -1,0 +1,75 @@
+# Lint, type check and test a Python repo, as job `ci` in its ci.yml:
+#
+#   jobs:
+#     ci:
+#       uses: vEXOULZ/conventions/.github/workflows/python-ci.yml@v1.0.0
+#       with:
+#         postgres: true
+#
+# Its jobs become the required checks `ci / lint` and `ci / test`. uv comes from [tool.uv]
+# required-version in pyproject.toml, Python from .python-version.
+name: python-ci
+
+on:
+  workflow_call:
+    inputs:
+      postgres:
+        description: Run a Postgres 17 service for the tests; its URL is in $TEST_DATABASE_URL
+        type: boolean
+        default: false
+      setup:
+        description: Shell commands run before the tests (installing a tool they need); empty to skip
+        type: string
+        default: ""
+      test-command:
+        type: string
+        default: uv run pytest -q
+      type-command:
+        description: The type check; mypy reads its files and settings from [tool.mypy]
+        type: string
+        default: uv run mypy
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install
+        # --locked fails if uv.lock is missing or stale for pyproject.toml.
+        run: uv sync --locked --all-extras
+      - name: ruff
+        run: uv run ruff check && uv run ruff format --check
+      - name: Type check
+        run: ${{ inputs.type-command }}
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # An empty image means no service: the only way to make a service optional.
+        image: ${{ inputs.postgres && 'postgres:17-alpine' || '' }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: ${{ inputs.postgres && 'postgresql://postgres:postgres@127.0.0.1:55432/postgres' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install
+        run: uv sync --locked --all-extras
+      - name: Setup
+        if: inputs.setup != ''
+        run: ${{ inputs.setup }}
+      - name: Test
+        run: ${{ inputs.test-command }}

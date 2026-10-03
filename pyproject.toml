@@ -1,0 +1,35 @@
+[project]
+name = "vexoulz-conventions"
+version = "1.0.0"
+description = "Shared conventions for the vEXOULZ repos: synced files, their check, and the repo settings."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+conventions = "conventions.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/conventions"]
+
+[tool.uv]
+required-version = ">=0.5"
+
+[tool.ruff]
+extend = ".conventions/ruff.toml"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

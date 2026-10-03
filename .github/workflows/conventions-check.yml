@@ -1,0 +1,59 @@
+# The conventions check every repo runs, as job `conventions` in its ci.yml:
+#
+#   jobs:
+#     conventions:
+#       uses: vEXOULZ/conventions/.github/workflows/conventions-check.yml@v1.0.0
+#       secrets: inherit
+#
+# Its jobs become the required checks `conventions / branch-name` and `conventions / check`. The tag
+# after @ must be the version in .conventions.toml; `check` fails otherwise.
+name: conventions
+
+on:
+  workflow_call:
+    inputs:
+      from:
+        description: Where to install the conventions CLI from; empty means the version .conventions.toml pins
+        type: string
+        default: ""
+    secrets:
+      CONVENTIONS_PRIVATE_PATTERNS:
+        description: Extra private-infrastructure patterns, one regular expression per line
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conventional Branch, and allowed into its base
+        # Through the environment, never interpolated into the script: a branch name is user input.
+        # Outside a pull request there is no head branch to judge, so this passes, and the check exists
+        # on every run, which is what lets it be required.
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: .conventions/githooks/check-pr-branches.sh "$HEAD" "$BASE"
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Synced files, workflows, layout
+        env:
+          FROM: ${{ inputs.from }}
+          PUBLIC: ${{ !github.event.repository.private }}
+          CONVENTIONS_PRIVATE_PATTERNS: ${{ secrets.CONVENTIONS_PRIVATE_PATTERNS }}
+        run: |
+          if [ -z "$FROM" ]; then
+            version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
+            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+          fi
+          args=()
+          if [ "$PUBLIC" = "true" ]; then args+=(--public); fi
+          uvx --python 3.13 --from "$FROM" conventions check "${args[@]}"
