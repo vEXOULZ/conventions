@@ -68,16 +68,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "repo-settings":
             repo = args.repo or repo_settings.current_repo()
             if args.apply:
-                for line in repo_settings.apply(repo, cfg):
+                done, warnings = repo_settings.apply(repo, cfg)
+                for line in done:
                     print(f"ok: {line}")
+                for warning in warnings:
+                    print(f"warning: {repo}: {warning}")
                 return 0
-            problems = repo_settings.check(repo, cfg)
+            problems, warnings = repo_settings.check(repo, cfg)
+            for warning in warnings:
+                print(f"warning: {repo}: {warning}")
             for problem in problems:
                 print(f"error: {repo}: {problem}")
             if problems:
                 print("\nfix with `conventions repo-settings --apply`", file=sys.stderr)
                 return 1
-            print(f"ok: {repo} settings match ({', '.join(cfg.protected_branches)} protected)")
+            protected = [b for b in cfg.protected_branches if repo_settings.free_warning(b) not in warnings]
+            print(f"ok: {repo} settings match" + (f" ({', '.join(protected)} protected)" if protected else ""))
             return 0
     except (config.ConfigError, repo_settings.GhError) as e:
         print(f"conventions: {e}", file=sys.stderr)

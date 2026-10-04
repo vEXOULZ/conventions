@@ -6,6 +6,9 @@
   pushes or deletion.
 - In a `flow = "dev"` repo, `dev` is the default branch, so pull requests target it by default.
 
+A private repo on GitHub Free can't have branch protection. There the merge settings still apply and
+are still checked, and each protected branch gets a warning instead of a failure.
+
 This is the only way these settings change; the GitHub UI is for looking. It talks to GitHub through
 the `gh` CLI, so it acts as whoever `gh auth status` says.
 """
@@ -24,6 +27,10 @@ REPO_FIELDS = {
     "allow_rebase_merge": False,
     "delete_branch_on_merge": True,
 }
+
+
+# What GitHub answers (HTTP 403) when a plan doesn't allow branch protection on a private repo.
+UPGRADE_NEEDED = "Upgrade to GitHub Pro or make this repository public"
 
 
 class GhError(Exception):
@@ -124,18 +131,44 @@ def get_protection(repo: str, branch: str) -> dict[str, Any] | None:
         raise
 
 
-def check(repo: str, cfg: Config) -> list[str]:
-    problems = diff_repo(gh(f"repos/{repo}"), cfg)
+def unprotectable(e: GhError, repo_info: dict[str, Any]) -> bool:
+    return UPGRADE_NEEDED in str(e) and bool(repo_info.get("private"))
+
+
+def free_warning(branch: str) -> str:
+    return f"{branch} can't be protected: private repo on GitHub Free"
+
+
+def check(repo: str, cfg: Config) -> tuple[list[str], list[str]]:
+    """The problems, and the warnings: branches that can't be protected on this plan."""
+    repo_info = gh(f"repos/{repo}")
+    problems = diff_repo(repo_info, cfg)
+    warnings = []
     for branch in cfg.protected_branches:
-        problems += diff_protection(branch, get_protection(repo, branch), cfg)
-    return problems
+        try:
+            protection = get_protection(repo, branch)
+        except GhError as e:
+            if not unprotectable(e, repo_info):
+                raise
+            warnings.append(free_warning(branch))
+            continue
+        problems += diff_protection(branch, protection, cfg)
+    return problems, warnings
 
 
-def apply(repo: str, cfg: Config) -> list[str]:
+def apply(repo: str, cfg: Config) -> tuple[list[str], list[str]]:
+    """What was done, and the warnings: branches that can't be protected on this plan."""
     done = []
-    gh("-X", "PATCH", f"repos/{repo}", payload={**REPO_FIELDS, "default_branch": default_branch(cfg)})
+    warnings = []
+    repo_info = gh("-X", "PATCH", f"repos/{repo}", payload={**REPO_FIELDS, "default_branch": default_branch(cfg)})
     done.append(f"{repo}: merge commits only, branches deleted on merge, default branch {default_branch(cfg)}")
     for branch in cfg.protected_branches:
-        gh("-X", "PUT", f"repos/{repo}/branches/{branch}/protection", payload=protection_payload(cfg))
+        try:
+            gh("-X", "PUT", f"repos/{repo}/branches/{branch}/protection", payload=protection_payload(cfg))
+        except GhError as e:
+            if not unprotectable(e, repo_info or {}):
+                raise
+            warnings.append(free_warning(branch))
+            continue
         done.append(f"{repo}: {branch} protected; required checks {', '.join(cfg.required_checks)}")
-    return done
+    return done, warnings
