@@ -4,10 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from conventions import check, config, synced
+from conventions import __version__, check, config, synced
 from conventions.cli import main
 
 from .conftest import git
+
+V = f"v{__version__}"
 
 
 def problems(root: Path, public: bool = False) -> list[str]:
@@ -27,7 +29,7 @@ def test_edited_synced_file_fails(repo: Path) -> None:
     path = repo / ".conventions/CLAUDE.md"
     path.write_text(path.read_text(encoding="utf-8") + "\nAn extra rule.\n", encoding="utf-8")
     assert problems(repo) == [
-        ".conventions/CLAUDE.md differs from conventions v1.0.0; "
+        f".conventions/CLAUDE.md differs from conventions {V}; "
         "run `conventions sync` at the pinned version and commit the result"
     ]
     assert main(["-C", str(repo), "check"]) == 1
@@ -55,10 +57,10 @@ def test_missing_and_stray_files_fail(repo: Path) -> None:
 
 def test_version_mismatch_fails(repo: Path) -> None:
     toml = repo / config.CONFIG_NAME
-    toml.write_text(toml.read_text(encoding="utf-8").replace('"v1.0.0"', '"v0.9.0"'), encoding="utf-8")
+    toml.write_text(toml.read_text(encoding="utf-8").replace(f'"{V}"', '"v0.9.0"'), encoding="utf-8")
     found = problems(repo)
-    assert any("pins v0.9.0 but this is conventions v1.0.0" in p for p in found)
-    assert any("uses conventions-check.yml@v1.0.0, but .conventions.toml pins v0.9.0" in p for p in found)
+    assert any(f"pins v0.9.0 but this is conventions {V}" in p for p in found)
+    assert any(f"uses conventions-check.yml@{V}, but .conventions.toml pins v0.9.0" in p for p in found)
 
 
 # --- managed blocks ----------------------------------------------------------------------------------
@@ -76,7 +78,7 @@ def test_edited_block_fails(repo: Path) -> None:
     path = repo / ".gitignore"
     path.write_text(path.read_text(encoding="utf-8").replace("# conventions:end", "*.log\n# conventions:end"))
     assert problems(repo) == [
-        ".gitignore: the conventions block differs from v1.0.0; "
+        f".gitignore: the conventions block differs from {V}; "
         "run `conventions sync` at the pinned version and commit the result"
     ]
 

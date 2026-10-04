@@ -20,7 +20,7 @@ repos and checked:
 From the repo's root, on a Conventional Branch (`chore/adopt-conventions`):
 
 ```sh
-uvx --from git+https://github.com/vEXOULZ/conventions@v1.0.0 conventions init --profile python-service
+uvx --from git+https://github.com/vEXOULZ/conventions@v1.0.1 conventions init --profile python-service
 ```
 
 This writes `.conventions.toml` and then syncs. Then:
@@ -35,7 +35,7 @@ This writes `.conventions.toml` and then syncs. Then:
 ## `.conventions.toml`
 
 ```toml
-version = "v1.0.0"          # the release this repo follows; every workflow `uses: …@` must match it
+version = "v1.0.1"          # the release this repo follows; every workflow `uses: …@` must match it
 profile = "python-service"  # see Profiles
 flow = "trunk"              # "trunk": work merges into main. "dev": work integrates on dev, main is production
 extra_checks = []           # required checks beyond the profile's, e.g. a repo-specific CI job
