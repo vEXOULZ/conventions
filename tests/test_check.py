@@ -172,6 +172,7 @@ def test_required_checks() -> None:
     assert cfg.required_checks == [
         "conventions / branch-name",
         "conventions / check",
+        "conventions / version",
         "ci / lint",
         "ci / test",
         "image / build",

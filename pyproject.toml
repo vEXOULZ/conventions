@@ -1,6 +1,6 @@
 [project]
 name = "vexoulz-conventions"
-version = "1.0.1"
+version = "2.0.0"
 description = "Shared conventions for the vEXOULZ repos: synced files, their check, and the repo settings."
 readme = "README.md"
 requires-python = ">=3.13"
