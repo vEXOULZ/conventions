@@ -36,6 +36,23 @@
       "matchDepTypes": ["engines"],
       "matchDepNames": ["node"],
       "enabled": false
+    },
+    {
+      "description": "Python is set by conventions too (`.python-version` is checked): no `.python-version` or `requires-python` PRs, and the `python` base image keeps its minor version.",
+      "matchManagers": ["pyenv"],
+      "enabled": false
+    },
+    {
+      "description": "See above: `requires-python` follows the conventions Python version.",
+      "matchDepTypes": ["requires-python"],
+      "enabled": false
+    },
+    {
+      "description": "See above: the `python` image only gets patch and digest updates.",
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["python"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
     }
   ]
 }
