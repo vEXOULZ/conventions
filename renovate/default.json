@@ -3,6 +3,8 @@
   "description": "Shared Renovate settings for vEXOULZ repos. Extend with \"github>vEXOULZ/conventions//renovate/default\".",
   "extends": ["config:recommended"],
   "rangeStrategy": "bump",
+  "branchPrefix": "chore/",
+  "branchNameStrict": true,
   "customManagers": [
     {
       "customType": "regex",
