@@ -5,6 +5,7 @@
   "rangeStrategy": "bump",
   "branchPrefix": "chore/",
   "branchNameStrict": true,
+  "prHourlyLimit": 0,
   "customManagers": [
     {
       "customType": "regex",
