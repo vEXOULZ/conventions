@@ -25,6 +25,17 @@
       "prBodyNotes": [
         "Run `conventions sync` on this branch at the new version and push the result; until then `conventions / check` fails, as it should."
       ]
+    },
+    {
+      "description": "Node is set by conventions (`.nvmrc` is synced, `engines.node` is checked), so it moves with a conventions release, not a Renovate PR.",
+      "matchManagers": ["nvm"],
+      "enabled": false
+    },
+    {
+      "description": "See above: `engines.node` follows the conventions Node version.",
+      "matchDepTypes": ["engines"],
+      "matchDepNames": ["node"],
+      "enabled": false
     }
   ]
 }
