@@ -8,7 +8,7 @@
 #   jobs:
 #     image:
 #       needs: ci
-#       uses: vEXOULZ/conventions/.github/workflows/publish-image.yml@v1.0.1
+#       uses: vEXOULZ/conventions/.github/workflows/publish-image.yml@v2.0.0
 #       permissions:
 #         contents: read
 #         packages: write

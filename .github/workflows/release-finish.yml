@@ -1,0 +1,113 @@
+# Tag and publish a release once its pull request merges into main, as job `finish` in the release.yml
+# of a flow = "dev" repo. The whole caller:
+#
+#   name: release
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         bump:
+#           description: auto (from the commits), patch, minor or major
+#           type: choice
+#           options: [auto, patch, minor, major]
+#           default: auto
+#     pull_request:
+#       types: [closed]
+#       branches: [main]
+#   permissions:
+#     contents: read
+#   jobs:
+#     prepare:
+#       if: github.event_name == 'workflow_dispatch'
+#       uses: vEXOULZ/conventions/.github/workflows/release-prepare.yml@v2.0.0
+#       with:
+#         bump: ${{ inputs.bump }}
+#       secrets: inherit
+#     finish:
+#       if: github.event.pull_request.merged
+#       uses: vEXOULZ/conventions/.github/workflows/release-finish.yml@v2.0.0
+#       secrets: inherit
+#
+# Every pull request merged into main is a release (the `conventions / version` check made it raise the
+# version). This tags the merge commit vX.Y.Z and publishes the GitHub release with generated notes,
+# which starts the tag's own CI (the :vX.Y.Z image), then opens "Bring release vX.Y.Z back into dev"
+# unless dev already has main.
+#
+# It needs the secret RELEASE_TOKEN (contents and pull requests: write). A tag pushed with GITHUB_TOKEN
+# doesn't start workflows, so the release would never get its image.
+name: release-finish
+
+on:
+  workflow_call:
+    inputs:
+      from:
+        description: Where to install the conventions CLI from; empty means the version .conventions.toml pins
+        type: string
+        default: ""
+    secrets:
+      RELEASE_TOKEN:
+        description: A token that may push tags and open pull requests, so CI runs on them
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  finish:
+    if: github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - name: RELEASE_TOKEN is set
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::the repo needs the secret RELEASE_TOKEN; see https://github.com/vEXOULZ/conventions#releasing-a-flow--dev-repo"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Version
+        id: version
+        env:
+          FROM: ${{ inputs.from }}
+        run: |
+          if [ -z "$FROM" ]; then
+            version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
+            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+          fi
+          v=$(uvx --python 3.13 --from "$FROM" conventions version show)
+          if [ -z "$v" ]; then
+            echo "::error::this repo has no version to release"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$v" > /dev/null; then
+            echo "::error::tag v$v already exists; the version check should have stopped this merge"
+            exit 1
+          fi
+          echo "tag=v$v" >> "$GITHUB_OUTPUT"
+      - name: Tag and GitHub release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" --target "$SHA" --title "$TAG" --generate-notes
+          echo "Released $TAG at $SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Bring main back into dev
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git merge-base --is-ancestor "$SHA" origin/dev; then
+            echo "dev already has $TAG"
+            exit 0
+          fi
+          if [ -n "$(gh pr list --base dev --head main --state open --json number --jq '.[].number')" ]; then
+            echo "a pull request from main into dev is already open"
+            exit 0
+          fi
+          body="Merges main back into dev after release $TAG, so dev has the release commit and the version."
+          url=$(gh pr create --base dev --head main --title "Bring release $TAG back into dev" --body "$body")
+          echo "Back-merge: $url" >> "$GITHUB_STEP_SUMMARY"

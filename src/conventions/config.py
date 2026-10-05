@@ -22,7 +22,7 @@ FLOWS = ("trunk", "dev")
 # Required checks, as GitHub names them: "<caller job> / <reusable workflow job>". Every repo's ci.yml
 # calls conventions-check.yml as job `conventions`, the language workflow as job `ci`, and (for a
 # service) publish-image.yml as job `image`, so the names are the same everywhere.
-COMMON_CHECKS = ["conventions / branch-name", "conventions / check"]
+COMMON_CHECKS = ["conventions / branch-name", "conventions / check", "conventions / version"]
 PROFILE_CHECKS: dict[str, list[str]] = {
     "python-service": ["ci / lint", "ci / test", "image / build"],
     "python-lib": ["ci / lint", "ci / test"],

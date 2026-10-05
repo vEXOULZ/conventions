@@ -192,6 +192,9 @@ def _expected_calls(cfg: Config) -> list[tuple[str, str, str]]:
         calls.append(("ci.yml", "image", "publish-image.yml"))
     if cfg.profile == "site":
         calls.append(("publish.yml", "publish", "publish-site.yml"))
+    if cfg.flow == "dev":
+        calls.append(("release.yml", "prepare", "release-prepare.yml"))
+        calls.append(("release.yml", "finish", "release-finish.yml"))
     return calls
 
 
@@ -203,13 +206,16 @@ def check_workflows(root: Path, cfg: Config) -> list[str]:
     wdir = root / WORKFLOWS
     present = sorted(p.name for p in wdir.glob("*.y*ml")) if wdir.is_dir() else []
     allowed = ALLOWED_WORKFLOWS | set(cfg.extra_workflows)
+    if cfg.flow == "dev":
+        allowed.add("release.yml")
     if cfg.self_repo:
         # The reusable workflows themselves live here.
         allowed |= {p.name for p in wdir.glob("*.yml") if "workflow_call:" in p.read_text(encoding="utf-8")}
     for name in present:
         if name not in allowed:
             problems.append(
-                f"{WORKFLOWS}/{name}: workflows are ci.yml (checks) and publish.yml (publishing); "
+                f"{WORKFLOWS}/{name}: workflows are ci.yml (checks), publish.yml (publishing) and, "
+                'in a flow = "dev" repo, release.yml; '
                 "add it to extra_workflows in .conventions.toml if it really is neither"
             )
 

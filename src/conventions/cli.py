@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from conventions import __version__, check, config, repo_settings, synced
+from conventions import __version__, check, config, repo_settings, synced, version
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +32,21 @@ def main(argv: list[str] | None = None) -> int:
     p_settings.add_argument("--repo", help="OWNER/NAME (default: the repo gh sees here)")
 
     sub.add_parser("required-checks", help="print the required check names for this repo")
+
+    p_version = sub.add_parser("version", help="the repo's own version: show, check, next, set")
+    vsub = p_version.add_subparsers(dest="action", required=True)
+    vsub.add_parser("show", help="print the version (nothing when the repo has none)")
+    p_vcheck = vsub.add_parser("check", help="fail if the version files disagree, or a release doesn't bump")
+    p_vcheck.add_argument(
+        "--against",
+        metavar="REF",
+        help='the base of a pull request into main; in a flow = "dev" repo the version must be above it',
+    )
+    p_vnext = vsub.add_parser("next", help="print the version the next release should carry")
+    p_vnext.add_argument("--bump", default="auto", choices=version.BUMPS)
+    p_vnext.add_argument("--ref", default="HEAD", help="the branch being released (default HEAD)")
+    p_vset = vsub.add_parser("set", help="write a version into every file that carries it")
+    p_vset.add_argument("new", metavar="X.Y.Z")
 
     args = parser.parse_args(argv)
     root: Path = args.root.resolve()
@@ -65,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
             print("\n".join(cfg.required_checks))
             return 0
 
+        if args.command == "version":
+            return _version(root, cfg, args)
+
         if args.command == "repo-settings":
             repo = args.repo or repo_settings.current_repo()
             if args.apply:
@@ -85,10 +103,34 @@ def main(argv: list[str] | None = None) -> int:
             protected = [b for b in cfg.protected_branches if repo_settings.free_warning(b) not in warnings]
             print(f"ok: {repo} settings match" + (f" ({', '.join(protected)} protected)" if protected else ""))
             return 0
-    except (config.ConfigError, repo_settings.GhError) as e:
+    except (config.ConfigError, repo_settings.GhError, version.VersionError) as e:
         print(f"conventions: {e}", file=sys.stderr)
         return 1
     return 2
+
+
+def _version(root: Path, cfg: config.Config, args: argparse.Namespace) -> int:
+    if args.action == "show":
+        print(version.current(root) or "")
+        return 0
+    if args.action == "check":
+        problems, notes = version.check(root, cfg, against=args.against)
+        for note in notes:
+            print(f"note: {note}")
+        for problem in problems:
+            print(f"::error::{problem}" if _in_ci() else f"error: {problem}")
+        return 1 if problems else 0
+    if args.action == "next":
+        nxt = version.next_version(root, args.bump, args.ref)
+        print(nxt.version)
+        since = f"since {nxt.since}" if nxt.since else "with no release tag yet"
+        print(f"{nxt.kind}: {nxt.commits} commit(s) {since}", file=sys.stderr)
+        return 0
+    changed = version.set_version(root, args.new)
+    for rel in changed:
+        print(f"  updated {rel}")
+    print(f"ok: version {args.new}")
+    return 0
 
 
 def _sync(root: Path) -> int:

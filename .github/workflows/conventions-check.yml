@@ -2,11 +2,12 @@
 #
 #   jobs:
 #     conventions:
-#       uses: vEXOULZ/conventions/.github/workflows/conventions-check.yml@v1.0.1
+#       uses: vEXOULZ/conventions/.github/workflows/conventions-check.yml@v2.0.0
 #       secrets: inherit
 #
-# Its jobs become the required checks `conventions / branch-name` and `conventions / check`. The tag
-# after @ must be the version in .conventions.toml; `check` fails otherwise.
+# Its jobs become the required checks `conventions / branch-name`, `conventions / check` and
+# `conventions / version`. The tag after @ must be the version in .conventions.toml; `check` fails
+# otherwise.
 name: conventions
 
 on:
@@ -57,3 +58,28 @@ jobs:
           args=()
           if [ "$PUBLIC" = "true" ]; then args+=(--public); fi
           uvx --python 3.13 --from "$FROM" conventions check "${args[@]}"
+
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The base branch and the tags, for comparing a release with main.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: Version files agree; a release into main raises the version
+        # Every run checks that the files carrying the version agree. A pull request into main also has to
+        # raise it above main's and use a tag that doesn't exist yet, in a flow = "dev" repo, where such a
+        # pull request is a release. A repo with no version passes.
+        env:
+          FROM: ${{ inputs.from }}
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [ -z "$FROM" ]; then
+            version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
+            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+          fi
+          args=()
+          if [ "$EVENT" = "pull_request" ] && [ "$BASE" = "main" ]; then args+=(--against "origin/$BASE"); fi
+          uvx --python 3.13 --from "$FROM" conventions version check "${args[@]}"

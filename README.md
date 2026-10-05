@@ -12,6 +12,7 @@ repos and checked:
 | Shared Claude rules, hooks, `.gitattributes`, ruff config, `.nvmrc` | copied whole by `conventions sync` | `conventions / check` |
 | `CONTRIBUTING.md`, PR template and `.gitignore` sections | a managed block inside the repo's own file | `conventions / check` |
 | CI: lint, types, tests, image and site publishing | reusable workflows, pinned to a tag | `conventions / check` (the pin) |
+| The repo's own version, and releases | `conventions version`, `release.yml` in a `flow = "dev"` repo | `conventions / version` |
 | Merge methods, branch protection, required checks | `conventions repo-settings --apply` | `conventions repo-settings --check` |
 | New versions | the Renovate preset opens a PR | — |
 
@@ -20,7 +21,7 @@ repos and checked:
 From the repo's root, on a Conventional Branch (`chore/adopt-conventions`):
 
 ```sh
-uvx --from git+https://github.com/vEXOULZ/conventions@v1.0.1 conventions init --profile python-service
+uvx --from git+https://github.com/vEXOULZ/conventions@v2.0.0 conventions init --profile python-service
 ```
 
 This writes `.conventions.toml` and then syncs. Then:
@@ -35,7 +36,7 @@ This writes `.conventions.toml` and then syncs. Then:
 ## `.conventions.toml`
 
 ```toml
-version = "v1.0.1"          # the release this repo follows; every workflow `uses: …@` must match it
+version = "v2.0.0"          # the release this repo follows; every workflow `uses: …@` must match it
 profile = "python-service"  # see Profiles
 flow = "trunk"              # "trunk": work merges into main. "dev": work integrates on dev, main is production
 extra_checks = []           # required checks beyond the profile's, e.g. a repo-specific CI job
@@ -50,11 +51,19 @@ which keeps the required check names the same in every repo.
 
 | Profile | Jobs in `ci.yml` (and `publish.yml`) | Required checks |
 |---|---|---|
-| `python-service` | `conventions`, `ci` → `python-ci.yml`, `image` → `publish-image.yml` | `conventions / branch-name`, `conventions / check`, `ci / lint`, `ci / test`, `image / build` |
-| `python-lib` | `conventions`, `ci` → `python-ci.yml` | `conventions / branch-name`, `conventions / check`, `ci / lint`, `ci / test` |
-| `node-lib` | `conventions`, `ci` → `node-ci.yml` | `conventions / branch-name`, `conventions / check`, `ci / lint`, `ci / test`, `ci / build` |
+Every repo's required checks start with `conventions / branch-name`, `conventions / check` and
+`conventions / version`; the profile adds:
+
+| Profile | Jobs in `ci.yml` (and `publish.yml`) | Required checks it adds |
+|---|---|---|
+| `python-service` | `conventions`, `ci` → `python-ci.yml`, `image` → `publish-image.yml` | `ci / lint`, `ci / test`, `image / build` |
+| `python-lib` | `conventions`, `ci` → `python-ci.yml` | `ci / lint`, `ci / test` |
+| `node-lib` | `conventions`, `ci` → `node-ci.yml` | `ci / lint`, `ci / test`, `ci / build` |
 | `site` | as `node-lib`, plus `publish` → `publish-site.yml` in `publish.yml` | as `node-lib` |
-| `docs` | `conventions` | `conventions / branch-name`, `conventions / check` |
+| `docs` | `conventions` | — |
+
+A `flow = "dev"` repo also has `release.yml`, with job `prepare` → `release-prepare.yml` and job
+`finish` → `release-finish.yml` (see [Releasing a flow = "dev" repo](#releasing-a-flow--dev-repo)).
 
 `conventions required-checks` prints the list for a repo.
 
@@ -63,8 +72,8 @@ which keeps the required check names the same in every repo.
 - Every synced file and managed block matches the pinned version. Line endings don't count.
 - `CLAUDE.md` starts with `@.conventions/CLAUDE.md`.
 - The hooks are executable in git.
-- Workflows are only `ci.yml` and `publish.yml` (plus `extra_workflows`), with the profile's jobs, each
-  pinned to the same version as `.conventions.toml`.
+- Workflows are only `ci.yml` and `publish.yml` (plus `release.yml` in a `flow = "dev"` repo, and
+  `extra_workflows`), with the profile's jobs, each pinned to the same version as `.conventions.toml`.
 - Compose files are only `compose.yaml` and `compose.dev.yaml`, at the root. One `Dockerfile`, at the
   root. Nothing in `.githooks/` except `.githooks/local/`.
 - **Python:**
@@ -79,10 +88,56 @@ which keeps the required check names the same in every repo.
     secret, one regular expression per line, so the patterns themselves stay private.
   - A line that legitimately needs one carries `conventions:allow-infra`.
 
-## Releasing
+## `conventions version`
+
+The `conventions / version` job runs `conventions version check`. The same command works locally:
+
+```sh
+conventions version show            # the repo's version (nothing if it has none)
+conventions version check           # every file that carries it agrees
+conventions version check --against origin/main   # ...and it is a release: above main's, tag unused
+conventions version next            # what the next release should be, from the commits since the last v* tag
+conventions version set 1.4.0       # write it everywhere
+```
+
+The version lives in the root `pyproject.toml` (`[project] version`), the project's own block in
+`uv.lock`, `__version__` in `src/<module>/__init__.py` or `<module>/__init__.py`, and `package.json`
+with `package-lock.json`. Workspace members keep their own versions. A repo without any passes.
+
+`next` reads the Conventional Commits since the last `v*` tag: `!` or a `BREAKING CHANGE:` footer is a
+major (a minor before 1.0.0), `feat` a minor, anything else a patch. A version already raised by hand
+since the tag wins.
+
+In CI the job checks agreement on every run. On a pull request into `main` it adds `--against
+origin/main`, which in a `flow = "dev"` repo fails unless the version went up and its tag doesn't exist.
+A trunk repo gets only a note.
+
+## Releasing a flow = "dev" repo
+
+A `flow = "dev"` repo adds `.github/workflows/release.yml`; [`release-finish.yml`](.github/workflows/release-finish.yml)
+has the whole file to copy. Then:
+
+1. **Actions → release → Run workflow**, from `dev`, with `bump` left at `auto` or set by hand.
+   `prepare` works out the version, commits it on `release/X-Y-Z` and opens "Release vX.Y.Z" into
+   `main`, listing the pull requests it carries.
+2. Review and merge it (a merge commit).
+3. `finish` tags the merge commit `vX.Y.Z` and publishes the GitHub release with generated notes, which
+   runs the tag's CI (the `:vX.Y.Z` image). It then opens "Bring release vX.Y.Z back into dev".
+4. Merge that.
+
+A `hotfix/*` into `main` sets its version with `conventions version set` and is finished the same way.
+
+**`RELEASE_TOKEN`.** Branches, pull requests and tags created with the workflow's own `GITHUB_TOKEN`
+don't start other workflows, so neither the release pull request's CI nor the tag's image would run.
+Both workflows therefore use a repository secret `RELEASE_TOKEN`: a fine-grained personal access token
+(or a GitHub App token) for the repo with **Contents: read and write** and **Pull requests: read and
+write**. They fail at once, saying so, when it is missing.
+
+## Releasing this repo
 
 1. Change things on a branch here. CI runs this repo's own check, from the checkout, against itself.
-2. Bump `version` in `pyproject.toml` and `__version__`, then merge.
+2. Bump the version (`uv run conventions version set X.Y.Z`) and the `@vX.Y.Z` examples in the
+   workflow headers and this README, then merge.
 3. Tag the merge commit `vX.Y.Z` and push the tag.
 4. Renovate opens a PR in each repo that bumps the pin and the `uses:` refs together. That PR fails
    `conventions / check` until someone runs `conventions sync` on its branch and pushes the result. The

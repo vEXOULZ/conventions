@@ -1,0 +1,131 @@
+# Open the release pull request of a flow = "dev" repo, as job `prepare` in its release.yml (see
+# release-finish.yml for the whole caller):
+#
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         bump:
+#           type: choice
+#           options: [auto, patch, minor, major]
+#           default: auto
+#   jobs:
+#     prepare:
+#       if: github.event_name == 'workflow_dispatch'
+#       uses: vEXOULZ/conventions/.github/workflows/release-prepare.yml@v2.0.0
+#       with:
+#         bump: ${{ inputs.bump }}
+#       secrets: inherit
+#
+# From dev it works out the next version (`conventions version next`: from the Conventional Commits
+# since the last v* tag, unless a version was already raised by hand), writes it on a new release/X-Y-Z
+# branch and opens "Release vX.Y.Z" into main, listing the pull requests it carries. Merging that pull
+# request is the release; release-finish.yml does the rest.
+#
+# It needs the secret RELEASE_TOKEN (contents and pull requests: write). A branch or pull request made
+# with GITHUB_TOKEN doesn't start workflows, so CI would never run on the release pull request.
+name: release-prepare
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: auto (from the commits), patch, minor or major
+        type: string
+        default: auto
+      from:
+        description: Where to install the conventions CLI from; empty means the version .conventions.toml pins
+        type: string
+        default: ""
+    secrets:
+      RELEASE_TOKEN:
+        description: A token that may push branches and open pull requests, so CI runs on them
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - name: RELEASE_TOKEN is set
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::the repo needs the secret RELEASE_TOKEN; see https://github.com/vEXOULZ/conventions#releasing-a-flow--dev-repo"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: astral-sh/setup-uv@v6
+      - name: No release already open
+        run: |
+          open=$(gh pr list --base main --state open --json number,headRefName \
+            --jq '.[] | select(.headRefName == "dev" or (.headRefName | startswith("release/"))) | "#\(.number) \(.headRefName)"')
+          if [ -n "$open" ]; then
+            echo "::error::a release is already open: $open. Merge or close it first."
+            exit 1
+          fi
+      - name: Next version
+        id: next
+        env:
+          FROM: ${{ inputs.from }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          if [ -z "$FROM" ]; then
+            version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
+            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+          fi
+          echo "from=$FROM" >> "$GITHUB_OUTPUT"
+          next=$(uvx --python 3.13 --from "$FROM" conventions version next --bump "$BUMP")
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "branch=release/$(echo "$next" | tr . -)" >> "$GITHUB_OUTPUT"
+      - name: Release branch
+        env:
+          FROM: ${{ steps.next.outputs.from }}
+          NEXT: ${{ steps.next.outputs.version }}
+          BRANCH: ${{ steps.next.outputs.branch }}
+        run: |
+          git switch -c "$BRANCH"
+          uvx --python 3.13 --from "$FROM" conventions version set "$NEXT"
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -qam "chore: release $NEXT"
+          fi
+          git push -q origin "$BRANCH"
+      - name: Release pull request
+        env:
+          NEXT: ${{ steps.next.outputs.version }}
+          BRANCH: ${{ steps.next.outputs.branch }}
+        run: |
+          since=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
+          {
+            echo "Release v$NEXT, from dev${since:+ (last release $since)}."
+            echo
+            echo "## Pull requests"
+            echo
+            # Merge commits on dev's first-parent line are the pull requests it took in. Bringing main
+            # back into dev is not a change of its own.
+            found=
+            for sha in $(git rev-list --merges --first-parent "${since:+$since..}HEAD"); do
+              subject=$(git log -1 --format=%s "$sha")
+              case "$subject" in *" from "*/main) continue ;; esac
+              number=$(echo "$subject" | sed -n 's/^Merge pull request #\([0-9]*\) .*/\1/p')
+              title=$(git log -1 --format=%b "$sha" | sed -n '1p')
+              echo "- ${title:-$subject}${number:+ (#$number)}"
+              found=1
+            done
+            [ -n "$found" ] || echo "- (no merged pull requests; see the commits)"
+            echo
+            echo "## When this merges"
+            echo
+            echo "release-finish tags the merge commit v$NEXT, publishes the GitHub release with generated"
+            echo "notes, and opens the pull request that brings main back into dev."
+          } > "$RUNNER_TEMP/body.md"
+          url=$(gh pr create --base main --head "$BRANCH" --title "Release v$NEXT" --body-file "$RUNNER_TEMP/body.md")
+          echo "Release v$NEXT: $url" >> "$GITHUB_STEP_SUMMARY"
