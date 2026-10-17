@@ -17,10 +17,10 @@ on:
   pull_request:
 jobs:
   conventions:
-    uses: vEXOULZ/conventions/.github/workflows/conventions-check.yml@{PIN}
+    uses: vexouLuna/conventions/.github/workflows/conventions-check.yml@{PIN}
     secrets: inherit
   ci:
-    uses: vEXOULZ/conventions/.github/workflows/python-ci.yml@{PIN}
+    uses: vexouLuna/conventions/.github/workflows/python-ci.yml@{PIN}
 """
 
 PYPROJECT = """\

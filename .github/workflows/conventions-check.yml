@@ -2,7 +2,7 @@
 #
 #   jobs:
 #     conventions:
-#       uses: vEXOULZ/conventions/.github/workflows/conventions-check.yml@v2.1.0
+#       uses: vexouLuna/conventions/.github/workflows/conventions-check.yml@v2.1.1
 #       secrets: inherit
 #
 # Its jobs become the required checks `conventions / branch-name`, `conventions / check` and
@@ -53,7 +53,7 @@ jobs:
         run: |
           if [ -z "$FROM" ]; then
             version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
-            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+            FROM="git+https://github.com/vexouLuna/conventions@$version"
           fi
           args=()
           if [ "$PUBLIC" = "true" ]; then args+=(--public); fi
@@ -78,7 +78,7 @@ jobs:
         run: |
           if [ -z "$FROM" ]; then
             version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)
-            FROM="git+https://github.com/vEXOULZ/conventions@$version"
+            FROM="git+https://github.com/vexouLuna/conventions@$version"
           fi
           args=()
           if [ "$EVENT" = "pull_request" ] && [ "$BASE" = "main" ]; then args+=(--against "origin/$BASE"); fi

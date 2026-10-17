@@ -26,7 +26,7 @@ CONVENTIONS_DIR = ".conventions"
 HOOKS_DIR = ".conventions/githooks"
 CLAUDE_IMPORT = "@.conventions/CLAUDE.md"
 
-_NOTE = "synced from vEXOULZ/conventions; edit it there, then run `conventions sync`"
+_NOTE = "synced from vexouLuna/conventions; edit it there, then run `conventions sync`"
 MARKERS = {
     "md": (f"<!-- conventions:begin: {_NOTE} -->", "<!-- conventions:end -->"),
     "hash": (f"# conventions:begin: {_NOTE}", "# conventions:end"),

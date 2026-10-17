@@ -45,7 +45,7 @@ class Config:
     flow: str = "trunk"
     extra_checks: list[str] = field(default_factory=list)
     extra_workflows: list[str] = field(default_factory=list)
-    # True only in vEXOULZ/conventions itself, which checks against its own checkout rather than a pin.
+    # True only in vexouLuna/conventions itself, which checks against its own checkout rather than a pin.
     self_repo: bool = False
 
     @property
@@ -107,8 +107,8 @@ def load(root: Path) -> Config:
 
 def render(version: str, profile: str, flow: str) -> str:
     return (
-        "# Which version of vEXOULZ/conventions this repo follows, and how.\n"
-        "# See https://github.com/vEXOULZ/conventions#conventionstoml\n"
+        "# Which version of vexouLuna/conventions this repo follows, and how.\n"
+        "# See https://github.com/vexouLuna/conventions#conventionstoml\n"
         f'version = "{version}"\n'
         f'profile = "{profile}"\n'
         f'flow = "{flow}"\n'

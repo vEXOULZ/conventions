@@ -1,4 +1,4 @@
-# Which version of vEXOULZ/conventions this repo follows, and how.
+# Which version of vexouLuna/conventions this repo follows, and how.
 # This is the conventions repo itself: `self` checks it against its own checkout instead of a pin, and
 # its ci.yml calls the reusable workflows by local path.
 version = "v2.1.0"

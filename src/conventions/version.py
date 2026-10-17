@@ -95,7 +95,7 @@ def _uv_lock_block(text: str, name: str) -> tuple[int, int] | None:
 
 def _init_files(root: Path, name: str) -> list[str]:
     """The package `__init__.py` that may carry `__version__`: the module named after the project, or else
-    the only package under src/ (a distribution name like vexoulz-conventions ships module conventions)."""
+    the only package under src/ (a distribution name like vex-conventions ships module conventions)."""
     module = re.sub(r"[-.]+", "_", name).lower()
     named = [rel for rel in (f"src/{module}/__init__.py", f"{module}/__init__.py") if (root / rel).is_file()]
     if named:
