@@ -136,6 +136,20 @@ def test_missing_ci_job_fails(repo: Path) -> None:
     assert any("needs a job `ci` that uses vEXOULZ/conventions/.github/workflows/python-ci.yml" in p for p in found)
 
 
+@pytest.mark.parametrize("owner", ["vexouLuna", "vexouluna", "VEXOULZ"])
+def test_either_owner_passes(repo: Path, owner: str) -> None:
+    # The owner is being renamed from vEXOULZ to vexouLuna; GitHub matches owners case-insensitively.
+    ci = repo / ".github/workflows/ci.yml"
+    ci.write_text(ci.read_text(encoding="utf-8").replace("vEXOULZ/", f"{owner}/"), encoding="utf-8")
+    assert problems(repo) == []
+
+
+def test_another_owner_fails(repo: Path) -> None:
+    ci = repo / ".github/workflows/ci.yml"
+    ci.write_text(ci.read_text(encoding="utf-8").replace("vEXOULZ/", "someone/"), encoding="utf-8")
+    assert any("needs a job `ci`" in p for p in problems(repo))
+
+
 def test_stray_workflow_fails_unless_listed(repo: Path) -> None:
     (repo / ".github/workflows/tests.yml").write_text("name: tests\n", encoding="utf-8")
     assert any(p.startswith(".github/workflows/tests.yml") for p in problems(repo))
