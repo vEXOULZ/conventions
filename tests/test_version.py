@@ -203,8 +203,8 @@ def test_a_dev_flow_repo_needs_release_yml(repo: Path) -> None:
 
     (repo / ".github/workflows/release.yml").write_text(
         "name: release\non:\n  workflow_dispatch:\njobs:\n"
-        f"  prepare:\n    uses: vEXOULZ/conventions/.github/workflows/release-prepare.yml@{PIN}\n"
-        f"  finish:\n    uses: vEXOULZ/conventions/.github/workflows/release-finish.yml@{PIN}\n",
+        f"  prepare:\n    uses: vexouLuna/conventions/.github/workflows/release-prepare.yml@{PIN}\n"
+        f"  finish:\n    uses: vexouLuna/conventions/.github/workflows/release-finish.yml@{PIN}\n",
         encoding="utf-8",
     )
     assert check.run(repo, config.load(repo)) == []

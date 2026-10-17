@@ -1,6 +1,6 @@
 # conventions
 
-The shared conventions for the vEXOULZ repos, and the tooling that keeps every repo on them. Each job
+The shared conventions for the vexouLuna repos, and the tooling that keeps every repo on them. Each job
 has one name and one way of being done. A conventions change reaches every repo as a pull request, and
 CI fails when a repo drifts.
 
@@ -21,7 +21,7 @@ repos and checked:
 From the repo's root, on a Conventional Branch (`chore/adopt-conventions`):
 
 ```sh
-uvx --from git+https://github.com/vEXOULZ/conventions@v2.1.0 conventions init --profile python-service
+uvx --from git+https://github.com/vexouLuna/conventions@v2.1.1 conventions init --profile python-service
 ```
 
 This writes `.conventions.toml` and then syncs. Then:
@@ -31,12 +31,12 @@ This writes `.conventions.toml` and then syncs. Then:
 2. Fix what `conventions check` reports, and commit.
 3. After the pull request merges, run `conventions repo-settings --apply`. The required checks are named
    after the jobs, so protection has to follow the new names.
-4. In `renovate.json`, extend the shared preset: `{"extends": ["github>vEXOULZ/conventions//renovate/default"]}`.
+4. In `renovate.json`, extend the shared preset: `{"extends": ["github>vexouLuna/conventions//renovate/default"]}`.
 
 ## `.conventions.toml`
 
 ```toml
-version = "v2.1.0"          # the release this repo follows; every workflow `uses: …@` must match it
+version = "v2.1.1"          # the release this repo follows; every workflow `uses: …@` must match it
 profile = "python-service"  # see Profiles
 flow = "trunk"              # "trunk": work merges into main. "dev": work integrates on dev, main is production
 extra_checks = []           # required checks beyond the profile's, e.g. a repo-specific CI job

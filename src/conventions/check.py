@@ -198,8 +198,8 @@ def _expected_calls(cfg: Config) -> list[tuple[str, str, str]]:
     return calls
 
 
-# The GitHub owner of this repo: vEXOULZ, being renamed to vexouLuna. GitHub matches owners
-# case-insensitively, and accepting both keeps every repo's check passing across the rename.
+# The GitHub owner of this repo: vexouLuna, renamed from vEXOULZ in Oct 2026. GitHub matches owners
+# case-insensitively, and the old name still redirects, so a workflow that names it keeps passing.
 OWNERS = ("vEXOULZ", "vexouLuna")
 REMOTE_USES = re.compile(rf"^(?i:{'|'.join(OWNERS)})/conventions/\.github/workflows/([\w.-]+)@(.+)$")
 
@@ -241,7 +241,7 @@ def check_workflows(root: Path, cfg: Config) -> list[str]:
         if not ok:
             problems.append(
                 f"{WORKFLOWS}/{file} needs a job `{job}` that uses "
-                f"vEXOULZ/conventions/.github/workflows/{reusable}@{cfg.version}; "
+                f"vexouLuna/conventions/.github/workflows/{reusable}@{cfg.version}; "
                 "the job ids make the required check names"
             )
     return problems

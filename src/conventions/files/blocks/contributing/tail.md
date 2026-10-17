@@ -11,7 +11,7 @@ Every pull request runs:
   `__version__`, `package.json`, `package-lock.json`) says the same. In a `flow = "dev"` repo a pull
   request into `main` must also raise it, to a version with no tag yet.
 - **`ci / …`:** the repo's lint, tests and build, from the reusable workflows in
-  [vEXOULZ/conventions](https://github.com/vEXOULZ/conventions).
+  [vexouLuna/conventions](https://github.com/vexouLuna/conventions).
 
 They are required checks on `main`. The repo's settings, protection included, are set by
 `conventions repo-settings --apply`.
@@ -19,10 +19,10 @@ They are required checks on `main`. The repo's settings, protection included, ar
 ## Shared conventions
 
 This section, `.conventions/`, `.gitattributes` and the other synced files come from
-[vEXOULZ/conventions](https://github.com/vEXOULZ/conventions), at the version pinned in
+[vexouLuna/conventions](https://github.com/vexouLuna/conventions), at the version pinned in
 `.conventions.toml`. Don't edit them here: change them there, release, and bump the pin (Renovate opens
 that pull request). After a bump, rewrite the copies and commit them:
 
 ```bash
-uvx --from "git+https://github.com/vEXOULZ/conventions@$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)" conventions sync
+uvx --from "git+https://github.com/vexouLuna/conventions@$(sed -n 's/^version *= *"\(.*\)"/\1/p' .conventions.toml)" conventions sync
 ```

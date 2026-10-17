@@ -133,20 +133,20 @@ def test_missing_ci_job_fails(repo: Path) -> None:
     ci = repo / ".github/workflows/ci.yml"
     ci.write_text(ci.read_text(encoding="utf-8").replace("  ci:\n", "  tests:\n"), encoding="utf-8")
     found = problems(repo)
-    assert any("needs a job `ci` that uses vEXOULZ/conventions/.github/workflows/python-ci.yml" in p for p in found)
+    assert any("needs a job `ci` that uses vexouLuna/conventions/.github/workflows/python-ci.yml" in p for p in found)
 
 
-@pytest.mark.parametrize("owner", ["vexouLuna", "vexouluna", "VEXOULZ"])
+@pytest.mark.parametrize("owner", ["vEXOULZ", "vexouluna", "VEXOULZ"])
 def test_either_owner_passes(repo: Path, owner: str) -> None:
-    # The owner is being renamed from vEXOULZ to vexouLuna; GitHub matches owners case-insensitively.
+    # The owner was renamed from vEXOULZ to vexouLuna; GitHub matches owners case-insensitively.
     ci = repo / ".github/workflows/ci.yml"
-    ci.write_text(ci.read_text(encoding="utf-8").replace("vEXOULZ/", f"{owner}/"), encoding="utf-8")
+    ci.write_text(ci.read_text(encoding="utf-8").replace("vexouLuna/", f"{owner}/"), encoding="utf-8")
     assert problems(repo) == []
 
 
 def test_another_owner_fails(repo: Path) -> None:
     ci = repo / ".github/workflows/ci.yml"
-    ci.write_text(ci.read_text(encoding="utf-8").replace("vEXOULZ/", "someone/"), encoding="utf-8")
+    ci.write_text(ci.read_text(encoding="utf-8").replace("vexouLuna/", "someone/"), encoding="utf-8")
     assert any("needs a job `ci`" in p for p in problems(repo))
 
 
