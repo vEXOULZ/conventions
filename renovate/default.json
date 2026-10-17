@@ -19,7 +19,7 @@
   "packageRules": [
     {
       "description": "The pin and every reusable workflow move together, in one PR. It fails `conventions / check` until someone runs `conventions sync` on the branch and pushes the result.",
-      "matchDepNames": ["vEXOULZ/conventions"],
+      "matchDepNames": ["vEXOULZ/conventions", "vexouLuna/conventions"],
       "groupName": "conventions",
       "automerge": false,
       "prBodyNotes": [

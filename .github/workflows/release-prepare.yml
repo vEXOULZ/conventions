@@ -11,7 +11,7 @@
 #   jobs:
 #     prepare:
 #       if: github.event_name == 'workflow_dispatch'
-#       uses: vEXOULZ/conventions/.github/workflows/release-prepare.yml@v2.0.0
+#       uses: vEXOULZ/conventions/.github/workflows/release-prepare.yml@v2.1.0
 #       with:
 #         bump: ${{ inputs.bump }}
 #       secrets: inherit

@@ -198,7 +198,10 @@ def _expected_calls(cfg: Config) -> list[tuple[str, str, str]]:
     return calls
 
 
-REMOTE_USES = re.compile(r"^vEXOULZ/conventions/\.github/workflows/([\w.-]+)@(.+)$")
+# The GitHub owner of this repo: vEXOULZ, being renamed to vexouLuna. GitHub matches owners
+# case-insensitively, and accepting both keeps every repo's check passing across the rename.
+OWNERS = ("vEXOULZ", "vexouLuna")
+REMOTE_USES = re.compile(rf"^(?i:{'|'.join(OWNERS)})/conventions/\.github/workflows/([\w.-]+)@(.+)$")
 
 
 def check_workflows(root: Path, cfg: Config) -> list[str]:
