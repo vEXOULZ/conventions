@@ -1,3 +1,3 @@
 """Shared conventions for the vexouLuna repos: synced files, their check, and the repo settings."""
 
-__version__ = "2.1.1"
+__version__ = "2.2.0"

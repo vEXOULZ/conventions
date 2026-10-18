@@ -2,7 +2,7 @@
 #
 #   jobs:
 #     conventions:
-#       uses: vexouLuna/conventions/.github/workflows/conventions-check.yml@v2.1.1
+#       uses: vexouLuna/conventions/.github/workflows/conventions-check.yml@v2.2.0
 #       secrets: inherit
 #
 # Its jobs become the required checks `conventions / branch-name`, `conventions / check` and
