@@ -21,7 +21,7 @@ repos and checked:
 From the repo's root, on a Conventional Branch (`chore/adopt-conventions`):
 
 ```sh
-uvx --from git+https://github.com/vexouLuna/conventions@v2.1.1 conventions init --profile python-service
+uvx --from git+https://github.com/vexouLuna/conventions@v2.2.0 conventions init --profile python-service
 ```
 
 This writes `.conventions.toml` and then syncs. Then:
@@ -36,7 +36,7 @@ This writes `.conventions.toml` and then syncs. Then:
 ## `.conventions.toml`
 
 ```toml
-version = "v2.1.1"          # the release this repo follows; every workflow `uses: …@` must match it
+version = "v2.2.0"          # the release this repo follows; every workflow `uses: …@` must match it
 profile = "python-service"  # see Profiles
 flow = "trunk"              # "trunk": work merges into main. "dev": work integrates on dev, main is production
 extra_checks = []           # required checks beyond the profile's, e.g. a repo-specific CI job
@@ -76,6 +76,8 @@ A `flow = "dev"` repo also has `release.yml`, with job `prepare` → `release-pr
   `extra_workflows`), with the profile's jobs, each pinned to the same version as `.conventions.toml`.
 - Compose files are only `compose.yaml` and `compose.dev.yaml`, at the root. One `Dockerfile`, at the
   root. Nothing in `.githooks/` except `.githooks/local/`.
+- Every changeset in `.changeset/` (when there is one) opens with a `---` header of
+  `"<pkg>": major|minor|patch|none` lines, so a broken one fails the PR instead of `changeset version`.
 - **Python:**
   - `.python-version` is 3.13, and `uv.lock` exists.
   - `requires-python >= 3.13`.
