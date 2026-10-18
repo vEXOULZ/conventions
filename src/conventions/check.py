@@ -61,6 +61,7 @@ def run(root: Path, cfg: Config, public: bool = False) -> list[str]:
         *check_hooks_executable(root, cfg),
         *check_workflows(root, cfg),
         *check_layout(files),
+        *check_changesets(root),
     ]
     if cfg.language == "python":
         problems += check_python(root)
@@ -317,6 +318,29 @@ def check_node(root: Path) -> list[str]:
     node = engines.get("node", "") if isinstance(engines, dict) else ""
     if not re.search(r"(?<!\d)22(?!\d)", node):
         problems.append(f'package.json: engines.node must name Node 22 (e.g. ">=22"), not {node!r}')
+    return problems
+
+
+# A changeset's header: `---`, one `"<pkg>": <bump>` line per package (none at all is an empty changeset), `---`.
+CHANGESET_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)^---[ \t]*\r?$", re.S | re.M)
+CHANGESET_LINE_RE = re.compile(r"""^\s*(?:"[^"]+"|'[^']+'|[^\s:'"]+)\s*:\s*(major|minor|patch|none)\s*$""")
+
+
+def check_changesets(root: Path) -> list[str]:
+    """Each changeset must parse, or `changeset version` fails at release time instead of in the PR."""
+    problems = []
+    for path in sorted((root / ".changeset").glob("*.md")):
+        if path.name == "README.md":
+            continue
+        rel = f".changeset/{path.name}"
+        # Stricter than @changesets/parse, which takes the first `---` pair anywhere and drops text above it.
+        match = CHANGESET_RE.match(path.read_text(encoding="utf-8").lstrip())
+        if not match:
+            problems.append(f'{rel}: no `---` header; start it with `---`, `"<pkg>": patch`, `---`')
+            continue
+        for line in match.group(1).splitlines():
+            if line.strip() and not CHANGESET_LINE_RE.match(line):
+                problems.append(f'{rel}: {line.strip()!r} is not `"<pkg>": major|minor|patch` in the header')
     return problems
 
 

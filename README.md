@@ -76,6 +76,8 @@ A `flow = "dev"` repo also has `release.yml`, with job `prepare` → `release-pr
   `extra_workflows`), with the profile's jobs, each pinned to the same version as `.conventions.toml`.
 - Compose files are only `compose.yaml` and `compose.dev.yaml`, at the root. One `Dockerfile`, at the
   root. Nothing in `.githooks/` except `.githooks/local/`.
+- Every changeset in `.changeset/` (when there is one) opens with a `---` header of
+  `"<pkg>": major|minor|patch|none` lines, so a broken one fails the PR instead of `changeset version`.
 - **Python:**
   - `.python-version` is 3.13, and `uv.lock` exists.
   - `requires-python >= 3.13`.

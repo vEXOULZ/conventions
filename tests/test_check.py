@@ -194,6 +194,40 @@ def test_required_checks() -> None:
     ]
 
 
+GOOD_CHANGESETS = [
+    "---\n'@vex/vods-core': patch\n---\n\nFix the timeline.\n",
+    '---\n"@vex/ui": minor\n"@vex/vods-core": major\n---\n\nTwo packages.\n',
+    "---\r\nvex-root: patch\r\n---\r\n\r\nCRLF checkout, unquoted name.\r\n",
+    "---\n---\n\nAn empty changeset releases nothing.\n",
+    "\n---\n'@vex/vods-core': none\n---\n\nLeading blank line, no release.\n",
+]
+BAD_CHANGESETS = [
+    "Compiled VODs keep their parts.\n",  # the vods-core d2f37da case: the header was overwritten
+    "---\n'@vex/vods-core': patch\n\nNo closing line.\n",
+    "---\n'@vex/vods-core': bugfix\n---\n\nUnknown bump.\n",
+    "---\n'@vex/vods-core' patch\n---\n\nNo colon.\n",
+    "Above the header.\n---\n'@vex/vods-core': patch\n---\n\nText before the header.\n",
+    "",
+]
+
+
+@pytest.mark.parametrize("text", GOOD_CHANGESETS)
+def test_good_changeset_passes(repo: Path, text: str) -> None:
+    (repo / ".changeset").mkdir()
+    (repo / ".changeset/README.md").write_text("# Changesets\n\nNo header here.\n", encoding="utf-8")
+    (repo / ".changeset/good.md").write_bytes(text.encode())
+    assert problems(repo) == []
+
+
+@pytest.mark.parametrize("text", BAD_CHANGESETS)
+def test_broken_changeset_fails(repo: Path, text: str) -> None:
+    (repo / ".changeset").mkdir()
+    (repo / ".changeset/broken.md").write_text(text, encoding="utf-8")
+    found = problems(repo)
+    assert len(found) == 1 and found[0].startswith(".changeset/broken.md: ")
+    assert main(["-C", str(repo), "check"]) == 1
+
+
 # --- private infrastructure --------------------------------------------------------------------------
 
 # Built by concatenation, so this file doesn't trip the check it tests.
